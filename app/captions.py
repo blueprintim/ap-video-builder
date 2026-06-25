@@ -64,29 +64,97 @@ def generate_captions(cfg, model=None):
         + json.dumps(facts, indent=2)
     )
 
-    body = {
-        "model": model,
-        "max_tokens": 2000,
-        "messages": [{"role": "user", "content": user_content}],
-    }
-    req = urllib.request.Request(
-        ANTHROPIC_URL,
-        data=json.dumps(body).encode(),
-        headers={
-            "content-type": "application/json",
-            "x-api-key": api_key,
-            "anthropic-version": "2023-06-01",
-        },
-        method="POST",
+    # A system prompt that hard-constrains the output to a single JSON object.
+    system = (
+        "You output ONLY a single valid JSON object and nothing else. "
+        "No markdown, no code fences, no preamble. The object has exactly these "
+        "string keys: youtube, instagram, facebook, x, pinterest, google_business. "
+        "CRITICAL: inside string values, every double-quote character must be "
+        "escaped as \\\". Prefer straight apostrophes for measurements (use 71'5\\\" "
+        "style only if you escape the inch mark). Do not include literal newlines "
+        "that break JSON; use \\n for line breaks within a value."
     )
-    with urllib.request.urlopen(req, timeout=90) as resp:
-        data = json.loads(resp.read())
 
-    text = "".join(b["text"] for b in data["content"] if b.get("type") == "text")
-    text = text.strip()
-    if text.startswith("```"):
-        text = text.split("```", 2)[1]
-        if text.startswith("json"):
-            text = text[4:]
-        text = text.strip()
-    return json.loads(text)
+    def _call(extra_user=None):
+        msgs = [{"role": "user", "content": user_content}]
+        if extra_user:
+            msgs.append({"role": "user", "content": extra_user})
+        body = {
+            "model": model,
+            "max_tokens": 2000,
+            "system": system,
+            "messages": msgs,
+        }
+        req = urllib.request.Request(
+            ANTHROPIC_URL,
+            data=json.dumps(body).encode(),
+            headers={
+                "content-type": "application/json",
+                "x-api-key": api_key,
+                "anthropic-version": "2023-06-01",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=90) as resp:
+            data = json.loads(resp.read())
+        return "".join(b["text"] for b in data["content"]
+                       if b.get("type") == "text").strip()
+
+    def _strip_fences(t):
+        t = t.strip()
+        if t.startswith("```"):
+            t = t.split("```", 2)[1]
+            if t.startswith("json"):
+                t = t[4:]
+            t = t.strip()
+        return t
+
+    def _extract_object(t):
+        # Pull just the outermost {...} in case there's stray text around it.
+        i, j = t.find("{"), t.rfind("}")
+        return t[i:j + 1] if (i != -1 and j != -1 and j > i) else t
+
+    KEYS = ["youtube", "instagram", "facebook", "x", "pinterest", "google_business"]
+
+    def _salvage(t):
+        # Last resort: pull each platform's value by key, tolerant of unescaped
+        # quotes inside values. Captures everything up to the next "key": or end.
+        import re
+        out = {}
+        for idx, k in enumerate(KEYS):
+            nexts = "|".join(f'"{n}"\\s*:' for n in KEYS if n != k)
+            pat = rf'"{k}"\s*:\s*"(.*?)"\s*(?:,\s*(?:{nexts})|}}\s*$)'
+            m = re.search(pat, t, re.DOTALL)
+            if m:
+                out[k] = m.group(1).replace('\\n', '\n').replace('\\"', '"').strip()
+        return out
+
+    # Attempt 1: normal parse
+    text = _strip_fences(_call())
+    try:
+        return json.loads(_extract_object(text))
+    except json.JSONDecodeError:
+        pass
+
+    # Attempt 2: ask the model to fix its own JSON
+    fix_msg = (
+        "Your previous response was not valid JSON (a quote or delimiter was "
+        "unescaped). Return the SAME content as a single strictly-valid JSON "
+        "object, with every internal double-quote escaped as \\\". Output only "
+        "the JSON object."
+    )
+    text2 = _strip_fences(_call(extra_user=fix_msg))
+    try:
+        return json.loads(_extract_object(text2))
+    except json.JSONDecodeError:
+        pass
+
+    # Attempt 3: salvage by regex so the job still completes with captions
+    salvaged = _salvage(_extract_object(text2)) or _salvage(_extract_object(text))
+    if salvaged:
+        return salvaged
+
+    # If everything failed, raise with a short preview for debugging
+    raise RuntimeError(
+        "Caption JSON could not be parsed after retries. "
+        f"First 200 chars: {text[:200]!r}")
