@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: crane-render
+    runtime: docker
+    plan: standard          # needs enough RAM/CPU for 1080p ffmpeg; starter may OOM
+    healthCheckPath: /
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false          # set in the Render dashboard (secret)
+      - key: CAPTION_MODEL
+        value: claude-sonnet-4-6
+      - key: ELEVENLABS_API_KEY
+        sync: false          # set in the Render dashboard (secret)
+      - key: ELEVENLABS_VOICE_ID
+        sync: false          # your chosen voice id (keep consistent across cranes)
+      - key: ELEVENLABS_MODEL
+        value: eleven_multilingual_v2
+      - key: GOOGLE_SERVICE_ACCOUNT_INFO
+        sync: false          # paste the service-account JSON as a secret
+      - key: DRIVE_PARENT_FOLDER_ID
+        sync: false          # the Drive folder shared with the service account
+      - key: RENDER_TMPDIR
+        value: /srv/.fftmp
+      - key: WORK_ROOT
+        value: /srv/_jobs
+    disk:
+      name: jobs
+      mountPath: /srv/_jobs
+      sizeGB: 10             # scratch space for renders; deliverables go to Drive

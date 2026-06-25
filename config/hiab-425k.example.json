@@ -1,0 +1,39 @@
+{
+  "_comment": "One config per crane. Fill the text fields and point the three asset filenames at files in the assets/ folder (or absolute paths). Specs are pasted here, not scraped.",
+
+  "id": "hiab-425k-drywall-kenworth-t880",
+
+  "page_url": "https://www.atlaspolar.com/demo-used-equipment/hiab-425k-drywall-crane-kenworth-truck-work-ready-package-for-sale-ppc.html",
+  "dealer": "Atlas Polar",
+  "phone": "647-290-2764",
+  "website": "atlaspolar.com",
+
+  "title": "HIAB 425K Drywall Crane",
+  "subtitle": "on a new Kenworth T880 Tri-Axle",
+  "kicker": "WORK-READY PACKAGE",
+
+  "closing_kicker": "WORK-READY \u00b7 DELIVERED",
+  "closing_headline": "Available Now",
+  "closing_sub": "Call Atlas Polar for pricing",
+
+  "thumb_line1": "HIAB 425K",
+  "thumb_line2": "DRYWALL CRANE",
+  "thumb_spec": "Lifts 9,000 lb \u00b7 71'5\" Reach \u00b7 Kenworth T880",
+
+  "specs_for_copy": "Lifting capacity 9,000 lb @ 69'8\" vertical; 4 hydraulic extensions; 71'5\" vertical outreach; HIAB XSDrive radio remotes; Space X4 electronic safety system; auxiliary legs; full-perimeter FTLS LED safety light system; rear HD camera; boom-stowed alert. Truck: new Kenworth T880 Tri-Axle; Cummins X15 475 hp; Allison 4500RDS automatic; 24'6\" steel drywall deck with full-length torsion box; 80,000 lb GVW; air ride.",
+
+  "photo": "hiab_truck_mounted_crane.jpg",
+  "_photo_note": "Optional: supply a purpose-shot vertical and/or square image for better framing. If omitted, the landscape photo above is cropped to fit. The thumbnail always uses the landscape photo.",
+  "photo_9x16": "",
+  "photo_1x1": "",
+  "video": "source_video.mp4",
+
+  "_voiceover_note": "Two modes. voiceover_source='file' uses the supplied audio file below (manual flow, e.g. from Canva). voiceover_source='elevenlabs' generates the MP3 from the approved 'script' via ElevenLabs (voice_id/tts_model optional; default to env vars).",
+  "voiceover_source": "file",
+  "voiceover": "voiceover.mp3",
+  "script": "From Atlas Polar — your work-ready HIAB boom truck package. Meet the HIAB four twenty-five K Drywall Crane, mounted on a new Kenworth T eight eighty tri-axle. It lifts nine thousand pounds with over seventy-one feet of reach, and comes fully equipped with radio remotes, electronic safety systems, auxiliary legs, LED safety lighting, and a rear camera. Underneath, a Cummins-powered Kenworth with an Allison automatic and a twenty-four-and-a-half-foot steel drywall deck. This work-ready package is available now. Call Atlas Polar at six four seven, two nine zero, two seven six four, or visit atlas polar dot com.",
+  "voice_id": "",
+  "tts_model": "",
+
+  "keep_source_audio": false
+}

@@ -1,0 +1,10 @@
+{
+  "name": "Atlas Polar",
+  "colors": {
+    "blue": "#004B8D",
+    "grey": "#6B7A72",
+    "red": "#D52B1F"
+  },
+  "white_logo": "assets/AP-Logo-White.png",
+  "color_logo": "assets/Atlas_Polar_logo.svg"
+}
