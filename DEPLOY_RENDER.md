@@ -86,6 +86,7 @@ the dashboard:
 
    | Key | Value |
    |-----|-------|
+   | `CRANE_API_TOKEN` | a long random secret that callers must send (see below) |
    | `ANTHROPIC_API_KEY` | your Anthropic key (`sk-ant-...`) |
    | `ELEVENLABS_API_KEY` | your ElevenLabs key |
    | `ELEVENLABS_VOICE_ID` | the voice ID you chose in ElevenLabs |
@@ -96,6 +97,13 @@ the dashboard:
    `WORK_ROOT`) are already filled from `render.yaml` — leave them.
 
 4. Save. Render redeploys automatically with the new values.
+
+> **The access token.** The service spends your ElevenLabs and Anthropic credit
+> and publishes to Drive, so every call except the `/` health check must carry
+> `Authorization: Bearer <CRANE_API_TOKEN>`. Make one with `openssl rand -hex 32`
+> (any 24+ random characters work), save it in Render and in Make, and never put
+> it in Git. With no token set the service answers `503` to everything but the
+> health check — it will not run open.
 
 > Finding your ElevenLabs voice ID: in the ElevenLabs app, open the voice you
 > want and copy its voice ID (a string like `21m00Tcm4TlvDq8ikWAM`). Pick one
@@ -123,6 +131,7 @@ ElevenLabs voiceover path, no audio file needed):
 
 ```bash
 curl -X POST https://crane-render-xxxx.onrender.com/render \
+  -H "Authorization: Bearer $CRANE_API_TOKEN" \
   -F "config=@config.json" \
   -F "photo=@photo.jpg" \
   -F "video=@video.mp4"
@@ -141,7 +150,8 @@ You'll get back:
 Poll the status until it's done:
 
 ```bash
-curl https://crane-render-xxxx.onrender.com/status/abc123...
+curl -H "Authorization: Bearer $CRANE_API_TOKEN" \
+  https://crane-render-xxxx.onrender.com/status/abc123...
 ```
 
 When `status` is `done`, the response includes the caption text and (if Drive is
@@ -169,6 +179,27 @@ overall. If you still want Path B:
 Because this skips `render.yaml`, you'll also manually add the persistent disk
 (Settings → Disks → 10 GB at mount path `/srv/_jobs`) that the Blueprint would
 have created.
+
+---
+
+## Adding the token to a service that is already running
+
+An existing deployment (and the Make scenario that calls it) keeps working
+through this order; do the steps in sequence and don't merge the auth change first:
+
+1. **Make first.** Add the header `Authorization: Bearer <token>` to the
+   `POST /render` HTTP module and to the `GET /status/<id>` poll. The old code
+   ignores the extra header, so nothing changes yet.
+2. **Render second.** Environment tab → add `CRANE_API_TOKEN` with the same
+   value → save (this redeploys the current code; still no change in behaviour).
+3. **Merge the change.** Render auto-deploys. From now on a request without the
+   token is refused. Check: `curl -i https://<service>/render -X POST` should
+   return `401`, and a normal Make run should still complete.
+4. **Rolling back** is a Render redeploy of the previous deploy; the token and
+   the Make headers can stay in place.
+
+A service that has no token set is *closed*, not open: until step 2 is done the
+new version answers `503 auth_not_configured` to Make.
 
 ---
 

@@ -1,0 +1,18 @@
+# secrets and local env
+.env
+.env.*
+
+# job scratch space and ffmpeg temp
+_jobs/
+.fftmp/
+
+# real per-crane configs stay local; only the brand config and the example ship
+config/*.json
+!config/brand.json
+!config/*.example.json
+
+# python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
