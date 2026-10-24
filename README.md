@@ -190,10 +190,41 @@ describes.
 
 ---
 
+## Calling the web service (authentication)
+
+Every route except the `GET /` health check requires a shared token:
+
+```
+Authorization: Bearer <CRANE_API_TOKEN>
+```
+
+In Make, add that header to **both** HTTP modules — the `POST /render` call and
+the `GET /status/<id>` poll. Without it the service answers `401`. If
+`CRANE_API_TOKEN` is unset (or shorter than 24 characters) the service answers
+`503 auth_not_configured` to everything except the health check: it never runs
+open. Generate a token with `openssl rand -hex 32`, store it in Render's
+Environment tab and in Make, and rotate it by changing both.
+
+Other responses worth handling in Make: `413` (upload over `MAX_UPLOAD_MB`) and
+`503 busy` with a `Retry-After` header (the render queue is full — retry later).
+Uploaded files are stored under fixed names (`photo.jpg`, `video.mp4`, ...), so
+the filenames Make sends don't matter; asset names inside the config JSON
+(`photo`, `video`, `voiceover`, `photo_9x16`, ...) are ignored — send the files
+as upload fields.
+
+---
+
 ## Environment variables
 
 | Var | Purpose |
 |-----|---------|
+| `CRANE_API_TOKEN` | **Required.** Shared secret callers send as a Bearer token (32+ random chars) |
+| `MAX_UPLOAD_MB` | Largest accepted request, default `400` |
+| `MAX_CONFIG_KB` | Largest config JSON, default `256` |
+| `MAX_SCRIPT_CHARS` | Longest ElevenLabs script, default `5000` |
+| `MAX_ACTIVE_JOBS` | Renders running at once, default `1` (the live instance has 512 MB) |
+| `MAX_PENDING_JOBS` | Renders running + queued before `503 busy`, default `6` |
+| `FFMPEG_TIMEOUT_SEC` | Kill any single ffmpeg/ffprobe call after this long, default `1800` |
 | `ANTHROPIC_API_KEY` | Caption generation (required for captions) |
 | `CAPTION_MODEL` | Override the model (default `claude-sonnet-4-6`) |
 | `ELEVENLABS_API_KEY` | Voiceover generation (required when `voiceover_source=elevenlabs`) |
@@ -216,7 +247,8 @@ describes.
 - **Instance sizing:** 1080p ffmpeg wants real CPU/RAM. Use Render's Standard
   plan or higher; the smallest tiers can OOM on a 3-minute encode.
 - **Concurrency:** one render holds state in memory. Scale by running more
-  Render instances, not more gunicorn workers per instance.
+  Render instances, not more gunicorn workers per instance. Within an instance
+  `MAX_ACTIVE_JOBS` renders run at once and extra jobs wait in a short queue.
 - **Vertical/square framing:** a landscape photo cropped to 9:16 loses the
   sides of the truck — there's no way to show a full wide vehicle in a tall
   frame from a wide source. For best results, supply a purpose-shot vertical
@@ -237,7 +269,9 @@ app/
   drive_upload.py    service-account upload to Google Drive
   run_job_lib.py     the pipeline as an importable function
   run_job.py         CLI entry point
-  server.py          Flask service for Render (async jobs)
+  server.py          Flask service for Render (token auth, safe uploads, job queue)
+  entrypoint.py      container start-up: hand over the work dirs, drop root, exec gunicorn
+tests/               pytest suite for the web layer (pip install flask pytest; pytest)
 config/
   brand.json         brand colours + logo paths (shared across cranes)
   hiab-425k.example.json   per-crane config template

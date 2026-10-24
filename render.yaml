@@ -5,6 +5,8 @@ services:
     plan: standard          # needs enough RAM/CPU for 1080p ffmpeg; starter may OOM
     healthCheckPath: /
     envVars:
+      - key: CRANE_API_TOKEN
+        sync: false          # secret, 32+ random chars; callers send it as "Authorization: Bearer <token>". Unset = every route except / answers 503.
       - key: ANTHROPIC_API_KEY
         sync: false          # set in the Render dashboard (secret)
       - key: CAPTION_MODEL

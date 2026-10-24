@@ -29,6 +29,10 @@ RATIO_DIMS = {
 OPENING_SEC = 2.0
 CLOSING_SEC = 3.0
 
+# Ceiling for any single ffmpeg/ffprobe call. A healthy encode finishes well
+# inside this; a hung or hostile one is killed instead of holding the render slot.
+FFMPEG_TIMEOUT_SEC = int(os.environ.get("FFMPEG_TIMEOUT_SEC") or 1800)
+
 
 def _run(cmd):
     # Force ffmpeg/libs to use a roomy temp dir on disk rather than a small
@@ -38,7 +42,12 @@ def _run(cmd):
     tmp = env.get("RENDER_TMPDIR") or os.path.join(os.getcwd(), ".fftmp")
     os.makedirs(tmp, exist_ok=True)
     env["TMPDIR"] = tmp
-    p = subprocess.run(cmd, capture_output=True, text=True, env=env)
+    try:
+        p = subprocess.run(cmd, capture_output=True, text=True, env=env,
+                           timeout=FFMPEG_TIMEOUT_SEC)
+    except subprocess.TimeoutExpired:
+        raise RuntimeError(
+            f"ffmpeg timed out after {FFMPEG_TIMEOUT_SEC}s:\n{' '.join(cmd)}")
     if p.returncode != 0:
         raise RuntimeError(f"ffmpeg failed:\n{' '.join(cmd)}\n\n{p.stderr[-2000:]}")
     return p
